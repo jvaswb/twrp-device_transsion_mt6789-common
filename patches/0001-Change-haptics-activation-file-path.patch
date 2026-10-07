@@ -1,34 +1,57 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Shivelight <shivelight@tuta.io>
-Date: Wed, 13 Sep 2023 08:06:19 +0700
-Subject: [PATCH] Change haptics activation file path
-
-Infinix or perhaps AWINIC Haptic Driver (aw862xx_haptic.ko) is using
-`/sys/class/leds/vibrator_single` instead of `/sys/class/leds/vibrator`.
-
-This is temporary until TWRP allows custom haptics file path
-https://github.com/TeamWin/android_bootable_recovery/issues/321
-
-Change-Id: I8b06ac64a1c7f2bb79a1295c505950afbf46a3d2
+From: jvaswb <bpsixta@gmail.com>
+Date: Mon, 5 Oct 2026 12:00:00 +0700
+Subject: [PATCH] minuitwrp: add LED class brightness haptics fallback
+ 
+Infinix X6882 recovery exposes /sys/class/leds/vibrator with only
+brightness/trigger (no transient trigger, so no duration/activate).
+Writing non-zero to brightness turns the motor on, 0 turns it off,
+and there is no auto-stop. Add a fallback that writes 1, waits
+timeout_ms in a detached thread, then writes 0 once the last
+overlapping vibration finishes.
+ 
+Replaces the old vibrator_single path patch.
 ---
- minuitwrp/events.cpp | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
+ minuitwrp/events.cpp | 19 ++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+ 
 diff --git a/minuitwrp/events.cpp b/minuitwrp/events.cpp
-index b5e5a14..c5b7dc3 100644
 --- a/minuitwrp/events.cpp
 +++ b/minuitwrp/events.cpp
-@@ -60,8 +60,8 @@ static std::atomic_int vib_on_count = 0;
- #define VIBRATOR_TIMEOUT_FILE	"/sys/class/timed_output/vibrator/enable"
- #define VIBRATOR_TIME_MS    50
+@@ -63,6 +63,10 @@
  
--#define LEDS_HAPTICS_DURATION_FILE	"/sys/class/leds/vibrator/duration"
--#define LEDS_HAPTICS_ACTIVATE_FILE	"/sys/class/leds/vibrator/activate"
-+#define LEDS_HAPTICS_DURATION_FILE	"/sys/class/leds/vibrator_single/duration"
-+#define LEDS_HAPTICS_ACTIVATE_FILE	"/sys/class/leds/vibrator_single/activate"
+ #define LEDS_HAPTICS_DURATION_FILE     "/sys/class/leds/vibrator/duration"
+ #define LEDS_HAPTICS_ACTIVATE_FILE     "/sys/class/leds/vibrator/activate"
++#define LEDS_HAPTICS_BRIGHTNESS_FILE   "/sys/class/leds/vibrator/brightness"
++#include <atomic>
++#include <thread>
++#include <unistd.h>
  
  #ifndef SYN_REPORT
  #define SYN_REPORT          0x00
+@@ -185,8 +189,19 @@
+     if (std::ifstream(LEDS_HAPTICS_ACTIVATE_FILE).good()) {
+         write_to_file(LEDS_HAPTICS_DURATION_FILE, tout);
+         write_to_file(LEDS_HAPTICS_ACTIVATE_FILE, "1");
+-    } else
+-        write_to_file(VIBRATOR_TIMEOUT_FILE, tout);
++    } else if (std::ifstream(LEDS_HAPTICS_BRIGHTNESS_FILE).good()
++               && !std::ifstream(VIBRATOR_TIMEOUT_FILE).good()) {
++        // LED-class vibrator without transient trigger: on -> wait -> off
++        static std::atomic_int led_vib_count{0};
++        led_vib_count++;
++        write_to_file(LEDS_HAPTICS_BRIGHTNESS_FILE, "1");
++        std::thread([timeout_ms] {
++            usleep(timeout_ms * 1000);
++            if (--led_vib_count == 0)
++                write_to_file(LEDS_HAPTICS_BRIGHTNESS_FILE, "0");
++        }).detach();
++    } else
++        write_to_file(VIBRATOR_TIMEOUT_FILE, tout);
+ #endif
+     return 0;
+ }
 -- 
 2.39.2
-
+ 
+ 

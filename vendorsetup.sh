@@ -48,13 +48,13 @@ fi
 export LC_ALL="C"
 
 # Patches
-RET=0
+P="$PWD/device/infinix/X688-common/patches/0001-minuitwrp-add-LED-brightness-haptics-fallback.patch"
 cd bootable/recovery
-git apply ../../device/infinix/X688-common/patches/0001-Change-haptics-activation-file-path.patch 
-> /dev/null 2>&1 || RET=$?
-cd ../../
-if [ $RET -ne 0 ];then
-    echo "ERROR: Patch is not applied! Maybe it's already patched?"
-else
+if git apply --reverse --check --ignore-whitespace "$P" > /dev/null 2>&1; then
+    echo "OK: Already patched"
+elif git apply --ignore-whitespace "$P" > /dev/null 2>&1; then
     echo "OK: All patched"
+else
+    echo "ERROR: Patch failed to apply!"
 fi
+cd ../../
