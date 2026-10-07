@@ -5,10 +5,13 @@ export FOX_AB_DEVICE=1
 export FOX_VIRTUAL_AB_DEVICE=1
 export OF_DEFAULT_KEYMASTER_VERSION=4.1
 export OF_NO_TREBLE_COMPATIBILITY_CHECK=1
-export OF_MAINTAINER="rama982"
-export FOX_VARIANT="R11.2-A12_ramabondanp"
+export OF_MAINTAINER="Rama982-Javas"
+export FOX_VARIANT="R11.3"
 export OF_FLASHLIGHT_ENABLE=0
 
+export OF_USE_MAGISKBOOT=1
+export FOX_USE_MAGISKBOOT_FOR_ALL_PATCHES=1
+export OF_ENABLE_FRP_ADDON=1
 export FOX_USE_BASH_SHELL=1
 export FOX_USE_NANO_EDITOR=1
 export FOX_USE_TAR_BINARY=1
@@ -16,7 +19,6 @@ export FOX_USE_SED_BINARY=1
 export FOX_USE_XZ_UTILS=1
 export FOX_ASH_IS_BASH=1
 export OF_ENABLE_LPTOOLS=1
-export FOX_DELETE_MAGISK_ADDON=1
 export FOX_DELETE_AROMAFM=1
 export FOX_ENABLE_APP_MANAGER=1
 export OF_SUPPORT_VBMETA_AVB2_PATCHING=1
@@ -51,11 +53,11 @@ git clone https://android.googlesource.com/platform/external/gflags/ -b android-
 # Patches
 RET=0
 cd bootable/recovery
-git apply ../../device/transsion/mt6789-common/patches/0001-Change-haptics-activation-file-path.patch > /dev/null 2>&1 || RET=$?
+git apply ../../device/infinix/X688-common/patches/0001-Change-haptics-activation-file-path.patch 
+> /dev/null 2>&1 || RET=$?
 cd ../../
 if [ $RET -ne 0 ];then
     echo "ERROR: Patch is not applied! Maybe it's already patched?"
 else
     echo "OK: All patched"
 fi
-
